@@ -1,4 +1,4 @@
-# Pulso de la Tierra
+# Tectonica
 
 Sistema de monitoreo sísmico global en tiempo real. Integra un pipeline de ingesta continua desde el feed oficial del **USGS** (*United States Geological Survey*), persistencia deduplicada en **PostgreSQL**, una API REST con caché en memoria en **FastAPI**, y un cliente web interactivo construido sobre **Three.js** y **TypeScript** con visualización geofísica sobre un globo 3D.
 
