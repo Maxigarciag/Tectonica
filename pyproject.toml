@@ -41,3 +41,5 @@ python_version = "3.13"
 warn_return_any = true
 warn_unused_ignores = true
 disallow_untyped_defs = true
+[tool.hatch.build.targets.wheel]
+packages = ["src/api", "src/ingest"]
