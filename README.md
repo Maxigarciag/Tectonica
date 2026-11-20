@@ -83,7 +83,7 @@ pulso-de-la-tierra/
 ├── docs/                           # Documentación técnica y registros de decisiones (ADR)
 ├── data/raw/usgs/                  # Snapshots GeoJSON descargados (ignorado por Git)
 ├── pyproject.toml                  # Dependencias Python y configuración Ruff / Mypy / Pytest
-└── .env.example                    # Plantilla de variables de entorno
+└── .env.example                    # Plantilla de referencia (no la lee la aplicación)
 ```
 
 ---
@@ -98,19 +98,28 @@ pulso-de-la-tierra/
 
 ## Instalación y Puesta en Marcha
 
-### 1. Variables de entorno
-Copiar la plantilla y configurar la cadena de conexión a PostgreSQL:
+### 1. Configuración
+
+El backend necesita la variable `DATABASE_URL` con la cadena de conexión a PostgreSQL. La aplicación **no lee el archivo `.env` automáticamente**, así que hay que definirla en cada terminal donde corras el worker o la API.
+
+En PowerShell (Windows):
+
+```powershell
+$env:DATABASE_URL = "postgresql://USUARIO:CONTRASEÑA@localhost:5432/pulso_local"
+```
+
+En Bash (Linux / macOS):
 
 ```bash
-cp .env.example .env
+export DATABASE_URL="postgresql://USUARIO:CONTRASEÑA@localhost:5432/pulso_local"
 ```
 
-Editar `.env`:
-```env
-DATABASE_URL=postgresql://usuario:password@localhost:5432/pulso_local
-```
+Antes de correrlo, creá la base de datos `pulso_local` en tu servidor de PostgreSQL. Si usás contraseñas con caracteres especiales (`@`, `#`, `/`, `%`), codificalos en la URL.
+
+Las pruebas de integración usan una base separada, `pulso_test`, definida en `TEST_DATABASE_URL`.
 
 ### 2. Backend (Python + FastAPI)
+
 Crear y activar un entorno virtual, e instalar dependencias:
 
 ```bash
@@ -124,16 +133,19 @@ pip install -e ".[dev]"
 ```
 
 Ejecutar el worker de ingesta (en una terminal):
+
 ```bash
 python -m src.ingest.usgs
 ```
 
 Levantar el servidor de API (en otra terminal):
+
 ```bash
-uvicorn src.api.main:app --reload --port 8000
+python -m uvicorn src.api.main:app --reload --port 8000
 ```
 
 ### 3. Frontend (Vite + TypeScript)
+
 Instalar dependencias e iniciar el servidor de desarrollo:
 
 ```bash
