@@ -1,5 +1,5 @@
 [project]
-name = "pulso-de-la-tierra"
+name = "tectonica"
 version = "0.1.0"
 description = "Earthquake data pipeline for 3D globe visualization"
 requires-python = ">=3.13"
