@@ -189,7 +189,7 @@ export class UI {
     brandText.className = 'brand-text'
 
     const title = document.createElement('h1')
-    title.textContent = 'Pulso de la Tierra'
+    title.textContent = 'Tectonica'
     brandText.appendChild(title)
 
     const sub = document.createElement('span')

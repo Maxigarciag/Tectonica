@@ -5,7 +5,7 @@ description = "Earthquake data pipeline for 3D globe visualization"
 requires-python = ">=3.13"
 dependencies = [
     "httpx>=0.28",
-    "psycopg[pool]>=3.2",
+    "psycopg[binary,pool]>=3.2",
     "fastapi>=0.115",
     "pydantic>=2.9",
     "uvicorn>=0.30",

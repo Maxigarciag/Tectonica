@@ -1,196 +1,192 @@
+<div align="center">
+
 # Tectonica
 
-Sistema de monitoreo sísmico global en tiempo real. Integra un pipeline de ingesta continua desde el feed oficial del **USGS** (*United States Geological Survey*), persistencia deduplicada en **PostgreSQL**, una API REST con caché en memoria en **FastAPI**, y un cliente web interactivo construido sobre **Three.js** y **TypeScript** con visualización geofísica sobre un globo 3D.
+**Near real-time seismic data pipeline and interactive 3D geospatial observatory**
+
+[![Python 3.13+](https://img.shields.io/badge/Python-3.13%2B-0369a1?style=flat-square&labelColor=0f172a)](https://www.python.org/)
+[![PostgreSQL 14+](https://img.shields.io/badge/PostgreSQL-14%2B-0369a1?style=flat-square&labelColor=0f172a)](https://www.postgresql.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-REST%20API-0369a1?style=flat-square&labelColor=0f172a)](https://fastapi.tiangolo.com/)
+[![TypeScript 5.7](https://img.shields.io/badge/TypeScript-5.7-0369a1?style=flat-square&labelColor=0f172a)](https://www.typescriptlang.org/)
+[![Three.js](https://img.shields.io/badge/Three.js-WebGL-0369a1?style=flat-square&labelColor=0f172a)](https://threejs.org/)
+
+<br />
+
+<img src="docs/gifs/demo.gif" alt="Tectonica — Interactive 3D Seismic Observatory Demo" width="100%" />
+
+</div>
 
 ---
 
-## Arquitectura General
+## Overview
 
+Public seismic feeds publish flat GeoJSON snapshots where individual events are repeatedly revised as monitoring stations refine magnitude and epicenter estimates. Querying those feeds directly from the browser couples the interface to external schemas, risks upstream rate limits, and provides no local persistence.
+
+**Tectonica** ingests official earthquake feeds from the **U.S. Geological Survey (USGS)** via periodic near real-time polling, deduplicates and versions records in **PostgreSQL**, serves typed contracts through a cached **FastAPI** service, and visualizes global seismic activity on an interactive **Three.js** globe.
+
+---
+
+## Key Features
+
+- **Resilient Near Real-Time Ingestion** — Adaptive Python worker polling USGS GeoJSON feeds (`>= 60s` floor via `Expires` headers) with exponential backoff, raw snapshot archiving, and conditional PostgreSQL upserts.
+- **Interactive 3D Globe** — Custom Three.js scene with NASA *Blue Marble* imagery, procedural ocean specular roughness, real-time UTC solar lighting, and smooth orbital camera flights.
+- **Tectonic Plates & Density Heatmap** — 3D **PB2002** plate boundaries with nearest-fault highlighting on event selection, paired with a latitude-compensated Gaussian thermal density layer.
+- **Telemetry & One-Click Filtering** — Live summary metrics, interactive 5-bin magnitude distribution filter, synchronized list-to-globe selection, collapsible event inspector, and `M >= 2.5` toast alerts.
+- **Freshness Monitoring & Fallback** — Health and status endpoints track ingestion recency, while the client preserves the last valid dataset during transient network failures.
+- **Dual Themes & Scene Controls** — Flash-free switching between **Dark Observatory** and **Light Cartographic Studio** modes, refractive HUD panels, stylized P/S wave visual cues, and playback/zoom controls.
+
+---
+
+## System Architecture
+
+```mermaid
+flowchart LR
+    USGS["USGS GeoJSON Feed"] -->|"HTTPS Poll (>=60s)"| Worker["Python Ingestion Worker"]
+    Worker -->|"Raw bytes"| Raw[("Raw Snapshots (data/raw/usgs/)")]
+    Worker -->|"Conditional Upsert"| PG[("PostgreSQL (earthquakes)")]
+    PG -->|"Indexed Read"| API["FastAPI (TTL + ETag Cache)"]
+    API -->|"REST JSON / 304"| UI["Three.js 3D Frontend"]
+
+    classDef primary fill:#0f172a,stroke:#38bdf8,stroke-width:1.5px,color:#f8fafc
+    classDef storage fill:#0f172a,stroke:#94a3b8,stroke-width:1.5px,color:#f8fafc
+    class USGS,Worker,API,UI primary
+    class Raw,PG storage
 ```
-USGS GeoJSON Feed (all_hour)
-        │
-        ▼
-  Worker de Ingesta (src/ingest/usgs.py)
-   ├── Snapshot crudo (data/raw/usgs/*.geojson)
-   └── Upsert deduplicado ──▶ PostgreSQL (src/ingest/db.py)
-                                    │
-                                    ▼
-                            API REST FastAPI (src/api/main.py)
-                             ├── Caché TTL 30s + ETag
-                             ├── GET /api/v1/earthquakes
-                             ├── GET /api/v1/status
-                             └── GET /health
-                                    │
-                                    ▼
-                            Frontend 3D (frontend/src/)
-                             ├── Globo Three.js + Placas PB2002
-                             ├── Mapa de densidad gaussiano
-                             └── Tablero telemétrico + Modo Oscuro/Claro
-```
 
----
-
-## Características Principales
-
-### Pipeline y Backend
-* **Ingesta continua y resiliente:** Consulta periódica al feed GeoJSON del USGS con reintentos exponenciales, validación de esquema, almacenamiento de respaldo local y *upsert* idempotente en PostgreSQL.
-* **API REST optimizada:** Endpoints tipados con Pydantic (`EarthquakesResponse`, `StatusResponse`, `HealthResponse`), soporte de ventanas temporales (`hour`, `day`), filtrado por magnitud mínima, caché en memoria con TTL de 30 s y validación `ETag`.
-* **Migraciones SQL:** Esquema versionado en `src/ingest/migrations/`.
-
-### Visualización 3D e Interfaz
-* **Globo 3D interactivo (Three.js):** Textura terrestre *Blue Marble* con máscara procedimental de rugosidad oceánica y atenuación polar, iluminación solar día/noche en tiempo real UTC y micro-rotación inercial tras inactividad.
-* **Contexto geológico (Placas Tectónicas PB2002):** Capa vectorial 3D de límites litosféricos con corte en antimeridiano y resaltado dinámico de la falla más cercana al seleccionar un sismo.
-* **Simulación sísmica:** Epicentros escalados por magnitud real, propagación de ondas P y S al seleccionar o detectar eventos nuevos, y mapa de densidad térmica gaussiano activable por capas.
-* **Tablero telemétrico y controles:** Resumen general (conteo, magnitud máxima, último evento, nivel de actividad), distribución por magnitud con **filtro interactivo de un clic**, panel de detalle colapsable con línea temporal, notificaciones discretas (`M ≥ 2.5`) y dock inferior de reproducción, velocidad y zoom.
-* **Modo Oscuro y Modo Claro:** Cambio instantáneo entre estética espacial oscura y estudio cartográfico claro sin parpadeo inicial (*anti-FOUC*), adaptando tanto los tokens CSS como la iluminación, el *blending* y el contraste de la escena WebGL.
-
----
-
-## Estructura del Repositorio
+For schema details, upsert SQL, 3D spherical math, and operational notes, see [`docs/architecture.md`](docs/architecture.md).
 
 ```text
-pulso-de-la-tierra/
+Tectonica/
 ├── src/
-│   ├── api/
-│   │   └── main.py                 # Aplicación FastAPI, caché ETag y endpoints REST
-│   └── ingest/
-│       ├── db.py                   # Pool de conexiones PostgreSQL, esquema y consultas
-│       ├── usgs.py                 # Worker de ingesta continua desde USGS
-│       └── migrations/             # Migraciones SQL incrementales
+│   ├── ingest/              # USGS polling worker (usgs.py), PostgreSQL pool/upsert (db.py) & SQL migrations
+│   └── api/                 # FastAPI endpoints, Pydantic DTOs & in-memory ETag cache (main.py)
 ├── frontend/
-│   ├── public/
-│   │   ├── earth-day.jpg           # Textura superficial Blue Marble
-│   │   ├── tectonic-plates.json    # Límites de placas tectónicas (PB2002 GeoJSON)
-│   │   └── logo.svg
-│   ├── src/
-│   │   ├── main.ts                 # Orquestación de estado, eventos y ciclo de vida
-│   │   ├── globe.ts                # Escena Three.js, shaders, capas 3D y cámara
-│   │   ├── ui.ts                   # Interfaz DOM, tablero, inspector y notificaciones
-│   │   ├── data.ts                 # Cliente HTTP y polling de estado/eventos
-│   │   ├── visibility.ts           # Proyección esférica y visibilidad desde cámara
-│   │   ├── liquidGlass.ts          # Integración de lentes WebGL (liquid-gl)
-│   │   ├── colors.ts               # Paleta de magnitudes y utilidades cromáticas
-│   │   ├── icons.ts                # Iconografía SVG
-│   │   ├── types.ts                # Contratos TypeScript (DTOs)
-│   │   └── styles.css              # Sistema de diseño, tokens y temas oscuro/claro
-│   ├── tests/
-│   │   └── verify_visibility.mjs   # Verificación matemática de proyección y horizonte
-│   ├── index.html
-│   ├── package.json
-│   └── vite.config.ts
-├── tests/                          # Suite de pruebas unitarias e integración (pytest)
-├── scripts/                        # Scripts auxiliares SQL (ej. usuario de solo lectura)
-├── docs/                           # Documentación técnica y registros de decisiones (ADR)
-├── data/raw/usgs/                  # Snapshots GeoJSON descargados (ignorado por Git)
-├── pyproject.toml                  # Dependencias Python y configuración Ruff / Mypy / Pytest
-└── .env.example                    # Plantilla de referencia (no la lee la aplicación)
+│   ├── public/              # NASA Blue Marble texture & PB2002 tectonic plates GeoJSON
+│   ├── src/                 # Three.js globe (globe.ts), telemetry UI (ui.ts), HTTP client & visibility math
+│   └── tests/               # Spherical projection & horizon culling verification
+├── tests/                   # Backend unit & PostgreSQL integration suites (pytest)
+├── scripts/                 # Least-privilege read-only PostgreSQL role script
+└── docs/                    # Architecture reference (architecture.md), ADRs & demo capture
 ```
 
 ---
 
-## Requisitos Previos
+## Engineering Highlights
 
-* **Python:** `>= 3.13`
-* **Node.js:** `>= 18` y `npm`
-* **PostgreSQL:** `>= 14`
+| Challenge | Implemented Solution |
+| :--- | :--- |
+| **Mutable upstream events** | Atomic `INSERT ... ON CONFLICT (id) DO UPDATE` guarded by `WHERE EXCLUDED.updated_ms > earthquakes.updated_ms` increments `version` only on newer revisions and uses `RETURNING (xmax = 0)` to classify inserts, updates, and skips. |
+| **Rate limits & transient faults** | Adaptive scheduling respects upstream `Expires` headers (`60s` floor) with `gzip` compression, 5-attempt exponential backoff on `429`/`5xx` errors, and isolated worker cycles that preserve existing state. |
+| **Raw data auditability** | Validated `FeatureCollection` payloads are archived unmodified as UTC-timestamped `.geojson` files prior to normalization into a hybrid relational + `JSONB` (`B-Tree` & `GIN`) schema. |
+| **Schema decoupling** | Strict input validation rejects malformed upstream responses, while FastAPI serves flat Pydantic v2 DTOs (`EarthquakeDTO`) decoupled from raw USGS `properties`. |
+| **Polling read amplification** | An in-memory `SimpleCache` (`30s` TTL) paired with `Cache-Control: max-age=30` and SHA-256 `ETag` headers short-circuits unchanged client polls with `HTTP 304 Not Modified`. |
+| **Pipeline observability** | Structured JSON logs report per-cycle `inserted`/`updated`/`skipped` counts, and `/health` + `/api/v1/status` evaluate `MAX(ingested_at)` against a `300s` staleness threshold. |
+| **Deterministic verification** | Unit tests simulate upstream HTTP edge cases via `httpx.MockTransport` and saved USGS fixtures, complemented by isolated PostgreSQL integration tests and Node.js 3D visibility assertions. |
+| **3D spherical accuracy** | Analytical horizon culling (`dot(normalize(P), normalize(C)) >= R / d`), viewport-calibrated marker clamping (`4.5–26 px`), antimeridian segment splitting, and `1 / cos(lat)` heatmap scaling prevent globe artifacts. |
 
 ---
 
-## Instalación y Puesta en Marcha
+## Technology Stack
 
-### 1. Configuración
+| Layer | Technologies |
+| :--- | :--- |
+| **Data Engineering** | Python `>= 3.13`, `httpx`, `psycopg` v3 (`psycopg_pool`), structured JSON `logging` |
+| **Storage** | PostgreSQL `>= 14` (Relational + `JSONB`, `B-Tree` & `GIN` indexes, SQL migrations) |
+| **Backend & API** | FastAPI, Pydantic v2, Uvicorn |
+| **Frontend & 3D** | TypeScript, Three.js, Vite, HTML5 Canvas, `liquid-gl`, CSS Custom Properties |
+| **Testing & Quality** | `pytest`, Ruff, Mypy, TypeScript (`tsc`), Node.js `assert` |
 
-El backend necesita la variable `DATABASE_URL` con la cadena de conexión a PostgreSQL. La aplicación **no lee el archivo `.env` automáticamente**, así que hay que definirla en cada terminal donde corras el worker o la API.
+---
 
-En PowerShell (Windows):
+## Getting Started
+
+### Prerequisites
+
+- **Python** `>= 3.13`, **Node.js** `>= 18` (`npm`), and **PostgreSQL** `>= 14`
+
+### 1. Database & Environment
+
+Create a local database (e.g., `pulso_local`) and export `DATABASE_URL`. **The application does not auto-load `.env` files**, so set `DATABASE_URL` in every terminal running the worker or API (URL-encode special password characters):
 
 ```powershell
-$env:DATABASE_URL = "postgresql://USUARIO:CONTRASEÑA@localhost:5432/pulso_local"
+# Windows (PowerShell)
+$env:DATABASE_URL = "postgresql://USER:PASSWORD@localhost:5432/pulso_local"
 ```
-
-En Bash (Linux / macOS):
 
 ```bash
-export DATABASE_URL="postgresql://USUARIO:CONTRASEÑA@localhost:5432/pulso_local"
+# Linux / macOS
+export DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/pulso_local"
 ```
 
-Antes de correrlo, creá la base de datos `pulso_local` en tu servidor de PostgreSQL. Si usás contraseñas con caracteres especiales (`@`, `#`, `/`, `%`), codificalos en la URL.
+### 2. Backend Setup & Schema Initialization
 
-Las pruebas de integración usan una base separada, `pulso_test`, definida en `TEST_DATABASE_URL`.
-
-### 2. Backend (Python + FastAPI)
-
-Crear y activar un entorno virtual, e instalar dependencias:
+`init_schema()` creates the base `earthquakes` table (including `event_time_ms`), while `depth_km` is added via migration `002` and must be applied before the first ingestion run:
 
 ```bash
 python -m venv .venv
-# Windows (PowerShell):
-.venv\Scripts\Activate.ps1
-# Linux / macOS:
-source .venv/bin/activate
+# Activate: .venv\Scripts\Activate.ps1 (PowerShell) | source .venv/bin/activate (Bash)
 
 pip install -e ".[dev]"
+python -c "from src.ingest.db import init_schema; init_schema()"
+psql "$DATABASE_URL" -f src/ingest/migrations/002_add_depth_km.sql
 ```
 
-Ejecutar el worker de ingesta (en una terminal):
+*(In PowerShell, pass `$env:DATABASE_URL` to `psql`. Legacy migration `001_add_event_time_ms.sql` is also idempotent if needed.)*
+
+### 3. Run Services
+
+Run each service in a separate terminal (with `.venv` active and `DATABASE_URL` set for Python processes):
 
 ```bash
+# Terminal 1 — Ingestion worker
 python -m src.ingest.usgs
-```
 
-Levantar el servidor de API (en otra terminal):
-
-```bash
+# Terminal 2 — REST API (http://127.0.0.1:8000)
 python -m uvicorn src.api.main:app --reload --port 8000
+
+# Terminal 3 — Frontend dev server (http://127.0.0.1:5173, proxies /api to :8000)
+cd frontend && npm install && npm run dev
 ```
-
-### 3. Frontend (Vite + TypeScript)
-
-Instalar dependencias e iniciar el servidor de desarrollo:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-La aplicación quedará disponible en `http://127.0.0.1:5173/` (consumiendo la API en `http://127.0.0.1:8000/`).
 
 ---
 
-## Endpoints de la API
+## API Reference
 
-| Método | Ruta | Parámetros | Descripción |
+| Method | Endpoint | Parameters | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/health` | — | Estado operativo del servicio y si los datos están desactualizados (`stale`). |
-| `GET` | `/api/v1/status` | — | Marca temporal de la última ingesta (`last_ingestion`) y antigüedad en segundos. |
-| `GET` | `/api/v1/earthquakes` | `window` (`hour` \| `day`), `min_mag` (`float`), `limit` (`int`) | Lista de sismos normalizados con soporte de caché TTL 30 s y `ETag`. |
+| `GET` | `/health` | — | Service status (`healthy` \| `degraded`) and `stale` flag (`MAX(ingested_at)` older than `300s`). |
+| `GET` | `/api/v1/status` | — | Latest `ingested_at` UTC timestamp, `age_seconds`, and `stale` boolean. |
+| `GET` | `/api/v1/earthquakes` | `window` (`hour` \| `day`), `min_mag` (`0–10`), `limit` (`1–1000`) | Filtered earthquake DTOs with `30s` TTL cache, `ETag`, and `304 Not Modified` support. |
+
+> [!NOTE]
+> Because the worker polls `all_hour.geojson` exclusively, `window=day` queries up to 24 hours of events accumulated locally in PostgreSQL since the worker started. In addition, `ingested_at` updates only on new inserts or upstream revisions, so `> 5` minutes without new global seismic updates marks `stale: true` even while polling is active (see [`docs/architecture.md`](docs/architecture.md#4-known-operational-behaviors--current-limitations)).
 
 ---
 
-## Pruebas y Verificación
+## Testing & Documentation
 
-### Backend
 ```bash
-pytest
+# Backend unit tests, linting, and type checking
+python -m pytest
 ruff check src tests
-mypy src
-```
+mypy --explicit-package-bases src
 
-### Frontend
-```bash
-# Verificación de tipos (tsc) y build de producción (Vite)
+# Optional PostgreSQL integration suite (apply migration 002 to pulso_test first)
+# PowerShell: $env:TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/pulso_test"; python -m pytest -v
+TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/pulso_test" python -m pytest -v
+
+# Frontend type check, production bundle, and 3D visibility math tests
 npm --prefix frontend run build
-
-# Verificación de proyección esférica y visibilidad de marcadores
 node frontend/tests/verify_visibility.mjs
 ```
 
+- **System Architecture & Operational Reference:** [`docs/architecture.md`](docs/architecture.md)
+- **Architecture Decision Records (Spanish):** [`docs/decisiones/`](docs/decisiones/) — Key records include [001 Stack](docs/decisiones/001-stack.md), [002 Deduplication & Persistence](docs/inbox/002-deduplicacion-persistencia.md), [003 API & Cache](docs/decisiones/003-api-y-cache.md), and [011 Marker Scaling](docs/decisiones/011-escalado-marcadores.md.md).
+
 ---
 
-## Fuentes de Datos y Documentación
+## Data Sources & Credits
 
-* **Sismicidad en tiempo real:** [USGS Earthquake Hazards Program](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php) (`all_hour.geojson`).
-* **Límites de placas tectónicas:** Modelo PB2002 (*Peter Bird, 2003*).
-* **Textura terrestre:** NASA *Blue Marble*.
-* **Decisiones de arquitectura:** Ver carpeta `docs/decisiones/`.
+- **Seismic Data:** [U.S. Geological Survey (USGS) — Earthquake Hazards Program](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php) (`all_hour.geojson`, public domain).
+- **Tectonic Boundaries:** Peter Bird (2003), *PB2002* digital model of plate boundaries.
+- **Planetary Imagery & Typography:** [NASA Visible Earth (*Blue Marble*)](https://visibleearth.nasa.gov/) (public domain) · *Inter* & *JetBrains Mono* (SIL OFL).
