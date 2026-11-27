@@ -4,31 +4,25 @@
 
 | Archivo | Estado | Origen | Licencia |
 |---------|--------|--------|----------|
-| `earth-day.jpg` | FALTANTE | NASA Blue Marble | Dominio público (NASA) |
-| `earth-night.jpg` | FALTANTE | NASA Black Marble | Dominio público (NASA) |
-| `countries.geojson` | FALTANTE | Natural Earth 110 m | Dominio público |
+| `earth-day.jpg` | DISPONIBLE | NASA Blue Marble | Dominio público (NASA) |
+| `tectonic-plates.json` | DISPONIBLE | Modelo PB2002 (Peter Bird, 2003) | Uso académico / público con atribución |
+| `earth-night.jpg` | NO INCLUIDO (opcional) | NASA Black Marble | Dominio público (NASA) |
+| `countries.geojson` | NO INCLUIDO (opcional) | Natural Earth 110 m | Dominio público |
 
 ## Estado actual
 
-Ninguno de los tres archivos de assets mencionados en la decisión 005 está presente en `frontend/public/`. Solo existe `earth-texture.jpg` (de la decisión 004, reemplazada por 005).
+- `earth-day.jpg` se encuentra disponible en `frontend/public/earth-day.jpg` y se utiliza como textura superficial principal del globo, generando además en tiempo de ejecución la máscara procedimental de rugosidad oceánica en `globe.ts`.
+- `tectonic-plates.json` se encuentra disponible en `frontend/public/tectonic-plates.json` para renderizar la capa vectorial 3D de límites de placas litosféricas.
+- `earth-night.jpg` y `countries.geojson` permanecen como recursos opcionales no incluidos en el repositorio.
 
-## Fallback implementado
+## Fallbacks activos para recursos opcionales
 
-Si los archivos faltan, el código usa fallbacks procedimentales:
+Si los archivos opcionales no están presentes en `frontend/public/`, la escena degrada de forma limpia sin errores fatales:
 
-1. **earth-day / earth-night**: El shader del globo usa colores planos (azul oceánico para día, negro con puntos para noche) en lugar de texturas de imagen. La mezcla día/noche se calcula desde la posición del sol basada en la hora UTC actual.
+1. **`earth-night.jpg`**: La iluminación día/noche sigue operando mediante `DirectionalLight` calculada según la posición solar UTC real, sin mapa emisivo nocturno.
+2. **`countries.geojson`**: Si la petición devuelve error o no existe el archivo, se omite silenciosamente el trazado de fronteras políticas manteniendo los continentes y las placas tectónicas.
 
-2. **countries.geojson**: Si el fetch falla, no se dibujan fronteras de países. El globo se muestra sin bordes nacionales.
+## Referencias de origen y licencias
 
-## Próximo paso
-
-Descargar y colocar en `frontend/public/`:
-- `earth-day.jpg`: https://visibleearth.nasa.gov/images/55167/blue-marble-west (dominio público NASA)
-- `earth-night.jpg`: https://visibleearth.nasa.gov/images/55167/black-marble (dominio público NASA)
-- `countries.geojson`: https://naturalearth.s3.amazonaws.com/110m_cultural/ne_110m_admin_0_countries.geojson (dominio público)
-
-Las imágenes de la NASA están en **dominio público** (NASA media usage policy: https://www.nasa.gov/multimedia/guidelines/index.html).
-
-## Licencias de fallbacks actuales
-
-Texturas procedimentales generadas para el proyecto Pulso de la Tierra. Sin restricciones de uso.
+- `earth-day.jpg`: https://visibleearth.nasa.gov/images/55167/blue-marble-west (dominio público NASA — https://www.nasa.gov/multimedia/guidelines/index.html)
+- `tectonic-plates.json`: Peter Bird (2003), *An updated digital model of plate boundaries* (PB2002), *Geochemistry, Geophysics, Geosystems*, 4(3), 1027.

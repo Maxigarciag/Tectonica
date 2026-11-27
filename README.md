@@ -181,7 +181,7 @@ node frontend/tests/verify_visibility.mjs
 ```
 
 - **System Architecture & Operational Reference:** [`docs/architecture.md`](docs/architecture.md)
-- **Architecture Decision Records (Spanish):** [`docs/decisiones/`](docs/decisiones/) — Key records include [001 Stack](docs/decisiones/001-stack.md), [002 Deduplication & Persistence](docs/inbox/002-deduplicacion-persistencia.md), [003 API & Cache](docs/decisiones/003-api-y-cache.md), and [011 Marker Scaling](docs/decisiones/011-escalado-marcadores.md.md).
+- **Architecture Decision Records (Spanish):** [`docs/decisiones/`](docs/decisiones/) — Key records include [001 Stack](docs/decisiones/001-stack.md), [002 Deduplication & Persistence](docs/decisiones/002-deduplicacion-persistencia.md), [003 API & Cache](docs/decisiones/003-api-y-cache.md), and [011 Marker Scaling](docs/decisiones/011-escalado-marcadores.md).
 
 ---
 

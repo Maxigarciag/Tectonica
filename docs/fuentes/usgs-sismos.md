@@ -24,4 +24,4 @@ tags: [fuente, sismos, usgs]
 - Un nombre de feed inválido puede devolver HTTP 200 con el texto `404 File Not Found`. Validar el nombre y el formato antes de parsear.
 
 ## Notas
-- Un mismo sismo puede aparecer varias veces con magnitud actualizada. La clave de deduplicación es el `id` del evento, y la lógica de "versión más nueva" hay que definirla en [[decisiones/002-deduplicacion]] (pendiente).
+- Un mismo sismo puede aparecer varias veces con magnitud actualizada. La clave de deduplicación es el `id` del evento, y la lógica de "versión más nueva" está definida en [[decisiones/002-deduplicacion-persistencia]].
